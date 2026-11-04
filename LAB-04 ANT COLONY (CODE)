@@ -1,0 +1,303 @@
+
+import numpy as np
+import random
+import networkx as nx
+import matplotlib.pyplot as plt
+
+# --------------------------------
+# MANET NETWORK INITIALIZATION
+# --------------------------------
+
+class MANET:
+    def __init__(self, num_nodes=8):
+        self.num_nodes = num_nodes
+
+        # Random positions of mobile nodes
+        self.positions = {
+            i: np.random.uniform(0, 10, 2)
+            for i in range(num_nodes)
+        }
+
+        self.communication_range = 5
+        self.graph = nx.Graph()
+
+        self.update_network()
+
+    # Create wireless connections
+    def update_network(self):
+        self.graph.clear()
+        self.graph.add_nodes_from(range(self.num_nodes))
+
+        for i in range(self.num_nodes):
+            for j in range(i + 1, self.num_nodes):
+
+                d = np.linalg.norm(
+                    self.positions[i] - self.positions[j]
+                )
+
+                if d <= self.communication_range:
+                    self.graph.add_edge(i, j, weight=d)
+
+    # Simulate node mobility
+    def move_nodes(self):
+        for i in range(self.num_nodes):
+            movement = np.random.uniform(-0.8, 0.8, 2)
+            self.positions[i] += movement
+            self.positions[i] = np.clip(
+                self.positions[i], 0, 10
+            )
+
+        self.update_network()
+
+
+# --------------------------------
+# ANT COLONY OPTIMIZATION
+# --------------------------------
+
+class ACO_MANET:
+
+    def __init__(self, graph, num_ants=15,
+                 iterations=50, alpha=1, beta=2,
+                 evaporation=0.5):
+
+        self.graph = graph
+        self.num_ants = num_ants
+        self.iterations = iterations
+        self.alpha = alpha
+        self.beta = beta
+        self.evaporation = evaporation
+
+        self.nodes = list(graph.nodes())
+
+        self.pheromone = np.ones(
+            (len(self.nodes), len(self.nodes))
+        ) * 0.1
+
+    # Find route using ants
+    def find_route(self, source, destination):
+
+        best_path = None
+        best_cost = float('inf')
+
+        for iteration in range(self.iterations):
+
+            all_paths = []
+
+            for ant in range(self.num_ants):
+
+                path = [source]
+                visited = {source}
+                current = source
+                cost = 0
+
+                while current != destination:
+
+                    neighbors = [
+                        n for n in self.graph.neighbors(current)
+                        if n not in visited
+                    ]
+
+                    if not neighbors:
+                        break
+
+                    probabilities = []
+
+                    for n in neighbors:
+
+                        distance = self.graph[current][n]['weight']
+
+                        tau = self.pheromone[current][n] ** self.alpha
+                        eta = (1 / (distance + 0.01)) ** self.beta
+
+                        probabilities.append(tau * eta)
+
+                    total = sum(probabilities)
+
+                    if total == 0:
+                        break
+
+                    probabilities = np.array(probabilities)
+                    probabilities /= total
+
+                    next_node = np.random.choice(
+                        neighbors, p=probabilities
+                    )
+
+                    cost += self.graph[current][next_node]['weight']
+
+                    path.append(next_node)
+                    visited.add(next_node)
+                    current = next_node
+
+                if current == destination:
+
+                    all_paths.append((path, cost))
+
+                    if cost < best_cost:
+                        best_cost = cost
+                        best_path = path.copy()
+
+            # Pheromone evaporation
+            self.pheromone *= (1 - self.evaporation)
+
+            # Pheromone update
+            for path, cost in all_paths:
+
+                if cost > 0:
+                    deposit = 1 / cost
+
+                    for i in range(len(path) - 1):
+
+                        u = path[i]
+                        v = path[i + 1]
+
+                        self.pheromone[u][v] += deposit
+                        self.pheromone[v][u] += deposit
+
+        return best_path, best_cost
+
+
+# --------------------------------
+# GRAPH VISUALIZATION
+# --------------------------------
+
+def draw_manet(manet, path=None):
+
+    plt.figure(figsize=(9, 7))
+
+    pos = manet.positions
+
+    # Draw nodes
+    nx.draw_networkx_nodes(
+        manet.graph,
+        pos,
+        node_color='skyblue',
+        node_size=700
+    )
+
+    # Draw node labels
+    nx.draw_networkx_labels(
+        manet.graph,
+        pos,
+        font_weight='bold'
+    )
+
+    # Draw wireless connections
+    nx.draw_networkx_edges(
+        manet.graph,
+        pos,
+        edge_color='gray',
+        style='dashed',
+        width=1.5
+    )
+
+    # Show distances
+    labels = nx.get_edge_attributes(
+        manet.graph, 'weight'
+    )
+
+    labels = {
+        edge: round(weight, 2)
+        for edge, weight in labels.items()
+    }
+
+    nx.draw_networkx_edge_labels(
+        manet.graph,
+        pos,
+        edge_labels=labels,
+        font_size=8
+    )
+
+    # Highlight selected ACO route
+    if path is not None:
+
+        path_edges = list(zip(path[:-1], path[1:]))
+
+        nx.draw_networkx_edges(
+            manet.graph,
+            pos,
+            edgelist=path_edges,
+            edge_color='red',
+            width=3
+        )
+
+    plt.title("ACO Based MANET Routing")
+    plt.xlabel("X Position")
+    plt.ylabel("Y Position")
+    plt.grid(True)
+    plt.show()
+
+
+# --------------------------------
+# MAIN PROGRAM
+# --------------------------------
+
+if __name__ == "__main__":
+
+    random.seed(42)
+    np.random.seed(42)
+
+    # Create MANET
+    manet = MANET(num_nodes=8)
+
+    source = 0
+    destination = 7
+
+    print("MANET ACO ROUTING")
+    print("-------------------------")
+
+    # Display initial network
+    print("Number of Nodes:", manet.num_nodes)
+    print("Source Node:", source)
+    print("Destination Node:", destination)
+
+    # Run ACO
+    aco = ACO_MANET(
+        manet.graph,
+        num_ants=15,
+        iterations=50
+    )
+
+    best_path, best_cost = aco.find_route(
+        source, destination
+    )
+
+    if best_path is not None:
+
+        print("\nOptimal Route:", best_path)
+        print("Minimum Route Cost:", round(best_cost, 2))
+
+    else:
+        print("\nNo route available between source and destination.")
+
+    # Display MANET topology and selected route
+    draw_manet(manet, best_path)
+
+    # Simulate node mobility
+    print("\nSimulating MANET Node Mobility...")
+
+    manet.move_nodes()
+
+    print("Network topology updated.")
+
+    # Recalculate route after mobility
+    aco_after_mobility = ACO_MANET(
+        manet.graph,
+        num_ants=15,
+        iterations=50
+    )
+
+    new_path, new_cost = aco_after_mobility.find_route(
+        source, destination
+    )
+
+    if new_path is not None:
+
+        print("\nNew Optimal Route:", new_path)
+        print("New Route Cost:", round(new_cost, 2))
+
+    else:
+        print("\nNo route available after node mobility.")
+
+    # Display updated network
+    draw_manet(manet, new_path)
