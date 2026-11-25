@@ -1,0 +1,101 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+import random
+import math
+
+# 1. Solar energy fitness function
+def fitness(angle):
+    return 1000 * math.cos(math.radians(angle - 30))
+
+# 2. Initialize parameters
+wolves = 10
+iterations = 100
+
+# 3. Generate random wolf positions
+positions = [random.uniform(0, 90) for _ in range(wolves)]
+
+# Store best fitness in each iteration
+best_history = []
+
+# 4. Grey Wolf Optimizer
+for iteration in range(iterations):
+
+    ranked = sorted(positions, key=fitness, reverse=True)
+
+    alpha = ranked[0]
+    beta = ranked[1]
+    delta = ranked[2]
+
+    a = 2 - (2 * iteration / iterations)
+
+    new_positions = []
+
+    for x in positions:
+
+        # Alpha wolf
+        A1 = 2 * a * random.random() - a
+        C1 = 2 * random.random()
+        X1 = alpha - A1 * abs(C1 * alpha - x)
+
+        # Beta wolf
+        A2 = 2 * a * random.random() - a
+        C2 = 2 * random.random()
+        X2 = beta - A2 * abs(C2 * beta - x)
+
+        # Delta wolf
+        A3 = 2 * a * random.random() - a
+        C3 = 2 * random.random()
+        X3 = delta - A3 * abs(C3 * delta - x)
+
+        # Update position
+        new_x = (X1 + X2 + X3) / 3
+        new_x = max(0, min(90, new_x))
+
+        new_positions.append(new_x)
+
+    positions = new_positions
+
+    best = max(positions, key=fitness)
+    best_history.append(fitness(best))
+
+# 5. Find best solar panel angle
+best_angle = max(positions, key=fitness)
+max_energy = fitness(best_angle)
+
+# 6. Display output
+print("Best Solar Panel Angle =", round(best_angle, 2), "degrees")
+print("Maximum Solar Energy =", round(max_energy, 2), "W")
+
+# 7. Plot solar energy graph
+angles = np.linspace(0, 90, 100)
+energy = [fitness(x) for x in angles]
+
+plt.figure(figsize=(8, 5))
+
+plt.plot(angles, energy, color='blue',
+         label='Solar Energy Output')
+
+plt.scatter(best_angle, max_energy,
+            color='red', s=100,
+            label='Optimal Angle')
+
+plt.xlabel("Solar Panel Tilt Angle (Degrees)")
+plt.ylabel("Solar Energy (W)")
+plt.title("GWO - Solar Panel Placement Optimization")
+
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# 8. Plot convergence graph
+plt.figure(figsize=(8, 5))
+
+plt.plot(range(1, iterations + 1), best_history,
+         color='green')
+
+plt.xlabel("Iterations")
+plt.ylabel("Best Solar Energy (W)")
+plt.title("GWO Convergence Graph")
+plt.grid(True)
+plt.show()
