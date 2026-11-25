@@ -1,0 +1,105 @@
+
+import random
+import turtle
+
+# 1. Objective function
+def fitness(x):
+    return -x**2 + 10*x + 5
+
+# 2. Initialize parameters
+n = 10
+iterations = 100
+
+# 3. Generate random nests
+nests = [random.uniform(0, 10) for _ in range(n)]
+
+# 4. Find best nest
+best = max(nests, key=fitness)
+
+# 5. Cuckoo Search
+for i in range(iterations):
+
+    # Generate new solution
+    new = random.uniform(0, 10)
+
+    # Select random nest
+    j = random.randint(0, n-1)
+
+    # Replace if better
+    if fitness(new) > fitness(nests[j]):
+        nests[j] = new
+
+    # Update best solution
+    current = max(nests, key=fitness)
+
+    if fitness(current) > fitness(best):
+        best = current
+
+# 6. Display result
+print("Maximum x =", best)
+print("Maximum value =", fitness(best))
+
+# 7. Draw graph using Turtle
+screen = turtle.Screen()
+screen.title("Cuckoo Search - Function Maximization")
+screen.setup(800, 600)
+
+pen = turtle.Turtle()
+pen.speed(0)
+pen.hideturtle()
+
+# Coordinate conversion
+def X(x):
+    return -300 + x * 60
+
+def Y(y):
+    return -200 + y * 10
+
+# Draw X axis
+pen.penup()
+pen.goto(-300, -200)
+pen.pendown()
+pen.goto(350, -200)
+
+# Draw Y axis
+pen.penup()
+pen.goto(-300, -200)
+pen.pendown()
+pen.goto(-300, 200)
+
+# Draw function curve
+pen.color("blue")
+pen.penup()
+
+for i in range(101):
+    x = i / 10
+    y = fitness(x)
+
+    if i == 0:
+        pen.goto(X(x), Y(y))
+        pen.pendown()
+    else:
+        pen.goto(X(x), Y(y))
+
+# Mark maximum point
+pen.penup()
+pen.color("red")
+pen.goto(X(best), Y(fitness(best)))
+pen.dot(12)
+
+pen.goto(X(best) + 10, Y(fitness(best)) + 15)
+pen.write("Maximum Point", font=("Arial", 12, "bold"))
+
+# Graph title
+pen.goto(-100, 250)
+pen.write("Cuckoo Search Algorithm",
+          font=("Arial", 16, "bold"))
+
+# Axis labels
+pen.goto(300, -230)
+pen.write("X", font=("Arial", 12, "bold"))
+
+pen.goto(-340, 200)
+pen.write("Y", font=("Arial", 12, "bold"))
+
+turtle.done()
