@@ -1,0 +1,71 @@
+
+import matplotlib.pyplot as plt
+from concurrent.futures import ThreadPoolExecutor
+
+# 1. Traffic lane data
+lanes = ["North", "South", "East", "West"]
+
+vehicles = [25, 15, 35, 10]
+waiting_time = [45, 30, 60, 20]
+
+# 2. Parallel cellular processing
+def calculate_priority(data):
+    vehicle, wait = data
+    return vehicle * wait
+
+# 3. Process all lanes simultaneously
+with ThreadPoolExecutor(max_workers=4) as executor:
+    priority = list(executor.map(
+        calculate_priority,
+        zip(vehicles, waiting_time)
+    ))
+
+# 4. Calculate optimized green signal time
+total_cycle = 120
+min_green = 10
+
+remaining_time = total_cycle - (min_green * len(lanes))
+
+total_priority = sum(priority)
+
+green_time = []
+
+for p in priority:
+    time = min_green + (p / total_priority) * remaining_time
+    green_time.append(time)
+
+# 5. Display results
+print("TRAFFIC SIGNAL OPTIMIZATION")
+print("--------------------------------")
+
+for i in range(4):
+    print(lanes[i],
+          "Vehicles =", vehicles[i],
+          "Green Time =", round(green_time[i], 2), "seconds")
+
+print("--------------------------------")
+print("Total Cycle Time =", round(sum(green_time), 2), "seconds")
+
+# 6. Draw traffic density graph
+plt.figure(figsize=(8, 5))
+
+plt.bar(lanes, vehicles, color='blue')
+
+plt.xlabel("Traffic Lanes")
+plt.ylabel("Number of Vehicles")
+plt.title("Traffic Density in Each Lane")
+plt.grid(axis='y')
+
+plt.show()
+
+# 7. Draw optimized signal timing graph
+plt.figure(figsize=(8, 5))
+
+plt.bar(lanes, green_time, color='green')
+
+plt.xlabel("Traffic Lanes")
+plt.ylabel("Green Signal Time (Seconds)")
+plt.title("Optimized Traffic Signal Timing")
+plt.grid(axis='y')
+
+plt.show()
